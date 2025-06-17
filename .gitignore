@@ -1,0 +1,28 @@
+# Created by .ignore support plugin (hsz.mobi)
+### Java template
+*.class
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+.idea
+*.iml
+idea/
+target/
+node_modules/
+out/extension.js
+out/extension.js.map
+out/models.js
+out/models.js.map
+out/reference-service.js
+out/reference-service.js.map
+out/utils.js
+out/utils.js.map
+out/test/extension.test.js
+out/test/extension.test.js.map
+.vscode/extensions.json
+.vscode/launch.json
+.vscode/settings.json
+.vscode/tasks.json

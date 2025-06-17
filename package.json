@@ -1,0 +1,91 @@
+{
+  "name": "json-viewer-for-debug",
+  "displayName": "JSON Viewer for Debug",
+  "description": "A viewer for JSON data in Java debugger variables",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "icon": "123.png",
+  "categories": [
+    "Debuggers"
+  ],
+  "publisher": "hendiaome",
+  "activationEvents": [
+    "onDebug",
+    "onDebugDynamicConfigurations",
+    "onDebugResolve:java"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "json viewer for debug.showJsonView",
+        "title": "查看JSON"
+      },
+      {
+        "command": "json viewer for debug.openDevTools",
+        "title": "打开JSON查看器开发工具"
+      }
+    ],
+    "menus": {
+      "debug/variables/context": [
+        {
+          "command": "json viewer for debug.showJsonView",
+          "when": "debugState == 'stopped'",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "json viewer for debug.showJsonView",
+          "when": "debugState == 'stopped' && editorHasSelection",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "json viewer for debug.showJsonView",
+          "when": "debugState == 'stopped'"
+        },
+        {
+          "command": "json viewer for debug.openDevTools",
+          "when": "isDevelopment"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "json viewer for debug.showJsonView",
+        "key": "ctrl+shift+j",
+        "mac": "cmd+shift+j",
+        "when": "debugState == 'stopped'"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "clean": "rm -rf out *.vsix idea-copy-reference-*"
+
+  },
+  "devDependencies": {
+    "@types/glob": "^7.1.3",
+    "@types/mocha": "^8.0.4",
+    "@types/node": "^12.11.7",
+    "@types/vscode": "^1.90.0",
+    "@typescript-eslint/eslint-plugin": "^4.14.1",
+    "@typescript-eslint/parser": "^4.14.1",
+    "eslint": "^7.19.0",
+    "glob": "^8.0.0",
+    "minimatch": "^5.0.0",
+    "mocha": "^8.2.1",
+    "typescript": "^4.1.3",
+    "vscode-test": "^1.5.0"
+  },
+  "dependencies": {
+  }
+}

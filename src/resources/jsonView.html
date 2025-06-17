@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Viewer</title>
+    <!-- 本地JSON查看器的CSS -->
+    <link rel="stylesheet" href="{{jsonViewerCssUri}}">
+    <style>
+        :root {
+            --background-color: var(--vscode-editor-background);
+            --foreground-color: var(--vscode-editor-foreground);
+            --border-color: var(--vscode-panel-border);
+            --button-background: var(--vscode-button-background);
+            --button-foreground: var(--vscode-button-foreground);
+            --button-hover-background: var(--vscode-button-hoverBackground);
+        }
+        
+        body {
+            background-color: var(--background-color);
+            color: var(--foreground-color);
+            font-family: var(--vscode-editor-font-family, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
+            font-size: var(--vscode-editor-font-size, 14px);
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 头部样式 */
+        .header {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h2 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+        
+        /* 工具栏样式 */
+        .toolbar {
+            padding: 8px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        button {
+            background-color: var(--button-background);
+            color: var(--button-foreground);
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+        
+        button:hover {
+            background-color: var(--button-hover-background);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* 调试按钮 */
+        #debugButton {
+            background-color: #ff5500;
+            margin-left: auto;
+        }
+        
+        /* 搜索栏样式 */
+        .search-container {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
+        }
+        
+        #searchInput {
+            padding: 4px 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--background-color);
+            color: var(--foreground-color);
+        }
+        
+        .search-navigation button {
+            padding: 4px 10px;
+        }
+        
+        /* 内容区域样式 */
+        .content {
+            flex: 1;
+            overflow: auto;
+            padding: 10px;
+            position: relative;
+        }
+        
+        /* 自定义查看器样式 */
+        #jsonViewer {
+            background-color: var(--background-color);
+            color: var(--foreground-color);
+            border: none;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* jquery.json-viewer 自定义样式 */
+        .json-string {
+            color: var(--vscode-debugTokenExpression-string, #ce9178);
+        }
+        
+        .json-key {
+            color: var(--vscode-debugTokenExpression-name, #9cdcfe);
+        }
+        
+        .json-literal {
+            color: var(--vscode-debugTokenExpression-boolean, #569cd6);
+        }
+        
+        .json-value {
+            color: var(--vscode-debugTokenExpression-number, #b5cea8);
+        }
+        
+        /* 搜索高亮 */
+        .search-highlight {
+            background-color: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.33));
+            border-radius: 2px;
+        }
+        
+        .current-highlight {
+            background-color: var(--vscode-editor-findMatchBackground, rgba(255, 150, 0, 0.6));
+        }
+        
+        /* 错误容器 */
+        #errorContainer {
+            background-color: var(--vscode-inputValidation-errorBackground, rgba(210, 0, 0, 0.1));
+            color: var(--vscode-inputValidation-errorForeground, #f48771);
+            border: 1px solid var(--vscode-inputValidation-errorBorder, #f48771);
+            padding: 8px;
+            margin: 5px 0;
+            display: none;
+            border-radius: 2px;
+        }
+        
+        /* 状态栏 */
+        .status-bar {
+            padding: 5px 10px;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2 id="jsonTitle">JSON View</h2>
+    </div>
+    
+    <div class="toolbar">
+        <button id="copyButton" title="复制JSON到剪贴板">复制</button>
+        <button id="formatButton" title="切换格式化和紧凑视图">紧凑</button>
+        <button id="collapseToggleAllNodes" title="展开/折叠所有节点">展开/折叠全部</button>
+        
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="搜索...">
+            <button id="searchButton">搜索</button>
+        </div>
+    </div>
+    
+    <div id="errorContainer"></div>
+    
+    <div class="content">
+        <div id="jsonViewer"></div>
+    </div>
+    
+    <div class="status-bar">
+        <span id="statusBar">就绪</span>
+    </div>
+    
+    <!-- 使用本地jQuery (JSONViewer依赖) -->
+    <script src="{{jqueryUri}}"></script>
+    <!-- 使用本地JSON查看器的JavaScript -->
+    <script src="{{jsonViewerJsUri}}"></script>
+    <!-- 加载我们的自定义JavaScript -->
+    <script src="{{scriptUri}}"></script>
+    <script>
+        // VSCode API
+        const vscode = acquireVsCodeApi();
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM加载完成，初始化JSON查看器');
+            initJsonViewer();
+        });
+    </script>
+</body>
+</html> 
