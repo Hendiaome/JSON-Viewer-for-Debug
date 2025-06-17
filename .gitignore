@@ -26,3 +26,4 @@ out/test/extension.test.js.map
 .vscode/launch.json
 .vscode/settings.json
 .vscode/tasks.json
+json-viewer-for-debug-*.vsix

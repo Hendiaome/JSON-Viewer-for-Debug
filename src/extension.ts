@@ -17,11 +17,13 @@ function getOutputChannel(): vscode.OutputChannel {
     return outputChannel;
 }
 
-function log(message: string) {
+function log(message: string, show : boolean = false) {
     const channel = getOutputChannel();
     channel.appendLine(`[${new Date().toISOString()}] ${message}`);
 
-    channel.show();
+    if (show) {
+        channel.show();
+    }
    
 }
 
@@ -53,11 +55,11 @@ export function activate(context: vscode.ExtensionContext) {
                     if (m.event === 'stopped') {
                         // 记录暂停的线程ID
                         pausedThreadId = m.body.threadId;
-                        log(`Thread paused: ${pausedThreadId}`);
+                        log(`Thread paused: ${pausedThreadId}`, true);
                     } else if (m.event === 'continued') {
                         // 线程继续，清除记录的线程ID
                         pausedThreadId = null;
-                        log('Thread continued');
+                        log('Thread continued', true);
                     }
                 }
             };
@@ -77,7 +79,7 @@ export function activate(context: vscode.ExtensionContext) {
             let variableName = getVariableName(variableData);
             
             if (!variableName) {
-                log('No variable name found, trying to get from selection or user input');
+                log('No variable name found, trying to get from selection or user input', true);
                 variableName = await getVariableNameFromSelectionOrInput();
                 
                 if (!variableName) {
@@ -86,7 +88,7 @@ export function activate(context: vscode.ExtensionContext) {
                 }
             }
             
-            log(`Processing variable: ${variableName}`);
+            log(`Processing variable: ${variableName}`, true);
             
             // 检查调试状态
             if (!isDebuggerPaused()) {
@@ -100,7 +102,7 @@ export function activate(context: vscode.ExtensionContext) {
         } catch (error: any) {
             const errorMsg = error.message || String(error);
             vscode.window.showErrorMessage(`JSON View processing error: ${errorMsg}`);
-            log(`Error in JSONView command: ${errorMsg}`);
+            log(`Error in JSONView command: ${errorMsg}`, true);
         }
     });
     
@@ -143,17 +145,17 @@ function getVariableName(variableData: any): string | undefined {
     
     // 尝试不同的属性获取变量名
     if (variableData.variable && variableData.variable.name) {
-        log(`Found variable name from context menu: ${variableData.variable.name}`);
+        log(`Found variable name from context menu: ${variableData.variable.name}`, true);
         return variableData.variable.name;
     } 
     
     if (variableData.name) {
-        log(`Found variable name from direct property: ${variableData.name}`);
+        log(`Found variable name from direct property: ${variableData.name}`, true);
         return variableData.name;
     }
     
     if (variableData.evaluateName) {
-        log(`Found variable from evaluateName: ${variableData.evaluateName}`);
+        log(`Found variable from evaluateName: ${variableData.evaluateName}`, true);
         return variableData.evaluateName;
     }
     
@@ -195,14 +197,61 @@ function isDebuggerPaused(): boolean {
 
 // 尝试不同的JSON转换方法
 async function tryConvertToJson(variableName: string, context: vscode.ExtensionContext): Promise<void> {
+    // 获取配置的JSON库
+    const config = vscode.workspace.getConfiguration('jsonViewForDebug');
+    const jsonLibrary = config.get<string>('jsonLibrary', 'gson');
+    
+    log(`Using JSON library: ${jsonLibrary}`);
+    
     try {
-        // 先尝试fastjson
-        await evaluateAndShowJson(variableName, `com.alibaba.fastjson.JSON.toJSONString(${variableName})`, context);
-    } catch (error) {
-        log(`Error with alibaba fastjson: ${error}`);
+        let expression: string;
         
-
+        switch (jsonLibrary) {
+            case 'gson':
+                expression = `new com.google.gson.Gson().toJson(${variableName})`;
+                break;
+            case 'jackson':
+                expression = `new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(${variableName})`;
+                break;
+            case 'fastjson':
+                expression = `com.alibaba.fastjson.JSON.toJSONString(${variableName})`;
+                break;
+            default:
+                throw new Error(`Unsupported JSON library: ${jsonLibrary}`);
+        }
+        
+        await evaluateAndShowJson(variableName, expression, context);
+    } catch (error) {
+        log(`Error with ${jsonLibrary}: ${error}`);
+        
+        // 如果配置的库失败，尝试其他库作为备选
+        await tryFallbackLibraries(variableName, context, jsonLibrary);
     }
+}
+
+// 尝试备选的JSON库
+async function tryFallbackLibraries(variableName: string, context: vscode.ExtensionContext, failedLibrary: string): Promise<void> {
+    const libraries = [
+        { name: 'gson', expression: `new com.google.gson.Gson().toJson(${variableName})` },
+        { name: 'jackson', expression: `new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(${variableName})` },
+        { name: 'fastjson', expression: `com.alibaba.fastjson.JSON.toJSONString(${variableName})` }
+    ];
+    
+    // 过滤掉已经失败的库
+    const fallbackLibraries = libraries.filter(lib => lib.name !== failedLibrary);
+    
+    for (const lib of fallbackLibraries) {
+        try {
+            log(`Trying fallback library: ${lib.name}`);
+            await evaluateAndShowJson(variableName, lib.expression, context);
+            return; // 成功则返回
+        } catch (error) {
+            log(`Fallback library ${lib.name} also failed: ${error}`);
+        }
+    }
+    
+    // 所有库都失败了
+    throw new Error(`All JSON libraries failed. Please ensure you have at least one of the following libraries in your classpath: Gson, Jackson, or FastJSON`);
 }
 
 // 评估表达式并显示JSON结果
@@ -211,7 +260,7 @@ async function evaluateAndShowJson(variableName: string, expression: string, con
         throw new Error('No active debug session');
     }
     
-    log(`Evaluating expression: ${expression}`);
+    log(`Evaluating expression: ${expression}`, true);
     
     // 获取暂停的线程
     const pausedThreadId = await findPausedThread();

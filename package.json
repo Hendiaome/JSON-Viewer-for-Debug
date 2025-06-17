@@ -1,16 +1,36 @@
 {
   "name": "json-viewer-for-debug",
   "displayName": "JSON Viewer for Debug",
-  "description": "A viewer for JSON data in Java debugger variables",
+  "description": "A JSON viewer for any Java variable during debugging. Converts objects to JSON using Gson/Jackson/FastJSON and displays in a friendly interface.",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.90.0"
+    "vscode": "^1.60.0"
   },
   "icon": "123.png",
   "categories": [
     "Debuggers"
   ],
+  "keywords": [
+    "java",
+    "debug",
+    "json",
+    "viewer",
+    "gson",
+    "jackson",
+    "fastjson",
+    "variable",
+    "inspect"
+  ],
   "publisher": "hendiaome",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hendiaome/JSON-Viewer-for-Debug.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hendiaome/JSON-Viewer-for-Debug/issues"
+  },
+  "homepage": "https://github.com/hendiaome/JSON-Viewer-for-Debug#readme",
   "activationEvents": [
     "onDebug",
     "onDebugDynamicConfigurations",
@@ -61,7 +81,27 @@
         "mac": "cmd+shift+j",
         "when": "debugState == 'stopped'"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "JSON Viewer for Debug",
+      "properties": {
+        "jsonViewForDebug.jsonLibrary": {
+          "type": "string",
+          "enum": [
+            "gson",
+            "jackson",
+            "fastjson"
+          ],
+          "default": "gson",
+          "description": "JSON serialization library to use for converting Java objects to JSON",
+          "enumDescriptions": [
+            "Google Gson library (com.google.gson.Gson)",
+            "Jackson library (com.fasterxml.jackson.databind.ObjectMapper)",
+            "Alibaba FastJSON library (com.alibaba.fastjson.JSON)"
+          ]
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -76,7 +116,7 @@
     "@types/glob": "^7.1.3",
     "@types/mocha": "^8.0.4",
     "@types/node": "^12.11.7",
-    "@types/vscode": "^1.90.0",
+    "@types/vscode": "^1.60.0",
     "@typescript-eslint/eslint-plugin": "^4.14.1",
     "@typescript-eslint/parser": "^4.14.1",
     "eslint": "^7.19.0",
