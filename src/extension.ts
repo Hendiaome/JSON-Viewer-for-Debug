@@ -7,6 +7,9 @@ import * as path from 'path';
 // 创建输出通道
 let outputChannel: vscode.OutputChannel;
 
+// 存储暂停的线程ID
+let pausedThreadId: number | null = null;
+
 function getOutputChannel(): vscode.OutputChannel {
     if (!outputChannel) {
         outputChannel = vscode.window.createOutputChannel('json viewer for debug');
@@ -17,6 +20,8 @@ function getOutputChannel(): vscode.OutputChannel {
 function log(message: string) {
     const channel = getOutputChannel();
     channel.appendLine(`[${new Date().toISOString()}] ${message}`);
+
+    channel.show();
    
 }
 
@@ -29,6 +34,34 @@ export function activate(context: vscode.ExtensionContext) {
     // 监听调试会话启动
     vscode.debug.onDidStartDebugSession(session => {
         log(`Debug session started: ${session.type}, ${session.name}`);
+        // 清除之前的暂停线程ID
+        pausedThreadId = null;
+    });
+    
+    // 监听调试会话结束
+    vscode.debug.onDidTerminateDebugSession(session => {
+        log(`Debug session terminated: ${session.type}, ${session.name}`);
+        // 清除暂停线程ID
+        pausedThreadId = null;
+    });
+
+     // 注册调试协议事件监听器
+     vscode.debug.registerDebugAdapterTrackerFactory('*', {
+        createDebugAdapterTracker(session: vscode.DebugSession) {
+            return {
+                onDidSendMessage: m => {
+                    if (m.event === 'stopped') {
+                        // 记录暂停的线程ID
+                        pausedThreadId = m.body.threadId;
+                        log(`Thread paused: ${pausedThreadId}`);
+                    } else if (m.event === 'continued') {
+                        // 线程继续，清除记录的线程ID
+                        pausedThreadId = null;
+                        log('Thread continued');
+                    }
+                }
+            };
+        }
     });
     
     // 注册右键菜单命令
@@ -36,7 +69,7 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             // 检查调试会话状态
             if (!vscode.debug.activeDebugSession) {
-                vscode.window.showErrorMessage('没有活动的调试会话');
+                vscode.window.showErrorMessage('No active debug session');
                 return;
             }
             
@@ -48,7 +81,7 @@ export function activate(context: vscode.ExtensionContext) {
                 variableName = await getVariableNameFromSelectionOrInput();
                 
                 if (!variableName) {
-                    vscode.window.showErrorMessage('未找到变量名');
+                    vscode.window.showErrorMessage('Variable name not found');
                     return;
                 }
             }
@@ -57,7 +90,7 @@ export function activate(context: vscode.ExtensionContext) {
             
             // 检查调试状态
             if (!isDebuggerPaused()) {
-                vscode.window.showErrorMessage('调试器未暂停，无法评估表达式');
+                vscode.window.showErrorMessage('Debugger not paused, cannot evaluate expression');
                 return;
             }
             
@@ -66,7 +99,7 @@ export function activate(context: vscode.ExtensionContext) {
             
         } catch (error: any) {
             const errorMsg = error.message || String(error);
-            vscode.window.showErrorMessage(`处理JSON View出错: ${errorMsg}`);
+            vscode.window.showErrorMessage(`JSON View processing error: ${errorMsg}`);
             log(`Error in JSONView command: ${errorMsg}`);
         }
     });
@@ -175,24 +208,24 @@ async function tryConvertToJson(variableName: string, context: vscode.ExtensionC
 // 评估表达式并显示JSON结果
 async function evaluateAndShowJson(variableName: string, expression: string, context: vscode.ExtensionContext): Promise<void> {
     if (!vscode.debug.activeDebugSession) {
-        throw new Error('没有活动的调试会话');
+        throw new Error('No active debug session');
     }
     
     log(`Evaluating expression: ${expression}`);
     
     // 获取暂停的线程
-    const pausedThread = await findPausedThread();
-    if (!pausedThread) {
-        throw new Error('未找到暂停的线程');
+    const pausedThreadId = await findPausedThread();
+    if (!pausedThreadId) {
+        throw new Error('No paused thread found');
     }
     
     // 获取堆栈帧
     const stackFrames = await vscode.debug.activeDebugSession.customRequest('stackTrace', {
-        threadId: pausedThread.id
+        threadId: pausedThreadId
     });
     
     if (!stackFrames || !stackFrames.stackFrames || stackFrames.stackFrames.length === 0) {
-        throw new Error('未找到暂停线程的堆栈帧');
+        throw new Error('No stack frames found for paused thread');
     }
     
     // 使用顶层帧
@@ -203,11 +236,11 @@ async function evaluateAndShowJson(variableName: string, expression: string, con
         expression: expression,
         context: 'watch',
         frameId: frameId,
-        threadId: pausedThread.id
+        threadId: pausedThreadId
     });
     
     if (!response || !response.result) {
-        throw new Error(`表达式评估未返回结果: ${JSON.stringify(response)}`);
+        throw new Error(`Expression evaluation returned no result: ${JSON.stringify(response)}`);
     }
     
     log(`Received JSON result for ${variableName}`);
@@ -218,20 +251,9 @@ async function evaluateAndShowJson(variableName: string, expression: string, con
 
 // 寻找暂停的线程
 async function findPausedThread(): Promise<any> {
-    const threads = await vscode.debug.activeDebugSession!.customRequest('threads');
-    
-    if (!threads || !threads.threads || threads.threads.length === 0) {
-        throw new Error('调试会话中没有可用的线程');
-    }
-    
-    // 寻找暂停的线程
-    for (const thread of threads.threads) {
-        const stackTrace = await vscode.debug.activeDebugSession!.customRequest('stackTrace', { threadId: thread.id });
-        
-        if (stackTrace && stackTrace.stackFrames && stackTrace.stackFrames.length > 0) {
-            log(`Found paused thread: ${thread.id}, name: ${thread.name}`);
-            return thread;
-        }
+    // 如果有记录的暂停线程ID，直接使用
+    if (pausedThreadId !== null) {
+        return pausedThreadId;
     }
     
     return null;
@@ -256,14 +278,14 @@ function createJsonViewPanel(title: string, jsonString: string, context: vscode.
     // 设置面板关闭前的处理
     panel.onDidDispose(() => {
         // 在面板关闭时可以做一些清理工作
-        log(`JSON查看器面板已关闭: ${title}`);
+        log(`JSON viewer panel closed: ${title}`);
     }, null, context.subscriptions);
     
     // 设置状态变化的处理
     panel.onDidChangeViewState(e => {
         const panel = e.webviewPanel;
         if (panel.visible) {
-            log(`JSON查看器面板变为可见: ${title}`);
+            log(`JSON viewer panel became visible: ${title}`);
         }
     }, null, context.subscriptions);
     
