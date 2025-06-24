@@ -2,7 +2,7 @@
   "name": "json-viewer-for-debug",
   "displayName": "JSON Viewer for Debug",
   "description": "A JSON viewer for any Java variable during debugging. Converts objects to JSON using Gson/Jackson/FastJSON and displays in a friendly interface.",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.60.0"
   },
@@ -22,7 +22,7 @@
     "inspect"
   ],
   "publisher": "hendiaome",
-  "license": "MIT",
+  
   "repository": {
     "type": "git",
     "url": "https://github.com/hendiaome/JSON-Viewer-for-Debug.git"

@@ -36,9 +36,19 @@ function initJsonViewer() {
 
     document.getElementById('collapseToggleAllNodes').addEventListener('click', collapseToggleAllNodes);
     document.getElementById('searchButton').addEventListener('click', searchInJson);
+    document.getElementById('prevButton').addEventListener('click', goToPreviousResult);
+    document.getElementById('nextButton').addEventListener('click', goToNextResult);
     
     document.getElementById('searchInput').addEventListener('keydown', e => {
         if (e.key === 'Enter') searchInJson();
+        if (e.key === 'F3') {
+            e.preventDefault();
+            if (e.shiftKey) {
+                goToPreviousResult();
+            } else {
+                goToNextResult();
+            }
+        }
     });
 
     
@@ -223,6 +233,8 @@ let currentSearchIndex = -1;
 function searchInJson() {
     const searchText = document.getElementById('searchInput').value.trim().toLowerCase();
     if (!searchText || !jsonData) {
+        clearSearchResults();
+        updateSearchButtons();
         return;
     }
     
@@ -240,8 +252,10 @@ function searchInJson() {
     if (searchResults.length > 0) {
         currentSearchIndex = 0;
         highlightSearchResult(0);
+        updateSearchButtons();
         document.getElementById('statusBar').textContent = `找到 ${searchResults.length} 个匹配项`;
     } else {
+        updateSearchButtons();
         document.getElementById('statusBar').textContent = '未找到匹配项';
     }
 }
@@ -276,10 +290,43 @@ function highlightSearchResult(index) {
 
 
 
+// 跳转到上一个搜索结果
+function goToPreviousResult() {
+    if (searchResults.length === 0) return;
+    
+    currentSearchIndex = currentSearchIndex <= 0 ? searchResults.length - 1 : currentSearchIndex - 1;
+    highlightSearchResult(currentSearchIndex);
+    updateSearchButtons();
+}
+
+// 跳转到下一个搜索结果
+function goToNextResult() {
+    if (searchResults.length === 0) return;
+    
+    currentSearchIndex = currentSearchIndex >= searchResults.length - 1 ? 0 : currentSearchIndex + 1;
+    highlightSearchResult(currentSearchIndex);
+    updateSearchButtons();
+}
+
+// 更新搜索导航按钮状态
+function updateSearchButtons() {
+    const prevButton = document.getElementById('prevButton');
+    const nextButton = document.getElementById('nextButton');
+    
+    if (searchResults.length === 0) {
+        prevButton.disabled = true;
+        nextButton.disabled = true;
+    } else {
+        prevButton.disabled = false;
+        nextButton.disabled = false;
+    }
+}
+
 function clearSearchResults() {
     $('.search-highlight').removeClass('search-highlight current-highlight');
     searchResults = [];
     currentSearchIndex = -1;
+    updateSearchButtons();
 }
 
 // 显示错误消息

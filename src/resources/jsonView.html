@@ -90,8 +90,16 @@
             color: var(--foreground-color);
         }
         
+        .search-navigation {
+            display: flex;
+            gap: 2px;
+            margin-left: 4px;
+        }
+        
         .search-navigation button {
-            padding: 4px 10px;
+            padding: 4px 8px;
+            min-width: 24px;
+            font-weight: bold;
         }
         
         /* 内容区域样式 */
@@ -170,6 +178,10 @@
         <div class="search-container">
             <input type="text" id="searchInput" placeholder="搜索...">
             <button id="searchButton">搜索</button>
+            <div class="search-navigation">
+                <button id="prevButton" title="上一个匹配项" disabled>↑</button>
+                <button id="nextButton" title="下一个匹配项" disabled>↓</button>
+            </div>
         </div>
     </div>
     

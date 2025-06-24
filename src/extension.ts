@@ -55,7 +55,7 @@ export function activate(context: vscode.ExtensionContext) {
                     if (m.event === 'stopped') {
                         // 记录暂停的线程ID
                         pausedThreadId = m.body.threadId;
-                        log(`Thread paused: ${pausedThreadId}`, true);
+                        log(`Thread paused: ${pausedThreadId}`, false);
                     } else if (m.event === 'continued') {
                         // 线程继续，清除记录的线程ID
                         pausedThreadId = null;
