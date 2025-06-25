@@ -7,24 +7,22 @@ let viewState = {
     currentDisplay: 'formatted'
 };
 
-
-
 // 初始化
 function initJsonViewer() {
-    console.log("JsonViewer 初始化开始");
+    console.log("JsonViewer initialization started");
     
     // 从VSCode获取初始数据
     window.addEventListener('message', event => {
-        console.log("收到消息:", event.data);
+        console.log("Received message:", event.data);
         const message = event.data;
         
         switch (message.command) {
             case 'setJson':
-                console.log("处理JSON数据:", message.variableName);
+                console.log("Processing JSON data:", message.variableName);
                 handleJsonData(message.jsonString, message.variableName);
                 break;
             case 'showError':
-                console.log("显示错误:", message.errorMessage);
+                console.log("Showing error:", message.errorMessage);
                 showError(message.errorMessage);
                 break;
         }
@@ -33,7 +31,6 @@ function initJsonViewer() {
     // 注册按钮事件
     document.getElementById('copyButton').addEventListener('click', copyJsonToClipboard);
     document.getElementById('formatButton').addEventListener('click', toggleFormat);
-
     document.getElementById('collapseToggleAllNodes').addEventListener('click', collapseToggleAllNodes);
     document.getElementById('searchButton').addEventListener('click', searchInJson);
     document.getElementById('prevButton').addEventListener('click', goToPreviousResult);
@@ -50,9 +47,8 @@ function initJsonViewer() {
             }
         }
     });
-
     
-    console.log("JsonViewer 初始化完成，发送ready消息");
+    console.log("JsonViewer initialization completed, sending ready message");
     // 通知VSCode视图已准备就绪
     vscode.postMessage({ command: 'ready' });
 }
@@ -60,7 +56,7 @@ function initJsonViewer() {
 // 处理JSON数据
 function handleJsonData(jsonString, variableName) {
     try {
-        console.log("开始处理JSON数据", { variableName, jsonLength: jsonString.length });
+        console.log("Starting JSON data processing", { variableName, jsonLength: jsonString.length });
         
         // 设置标题
         document.getElementById('jsonTitle').textContent = `JSON View: ${variableName}`;
@@ -82,10 +78,10 @@ function handleJsonData(jsonString, variableName) {
                     JSON.parse(unquoted);
                     // 如果解析成功，使用去掉引号的字符串
                     processedJsonString = unquoted;
-                    console.log("检测到外层引号，已去除", { original: trimmed, processed: unquoted });
+                    console.log("Detected outer quotes, removed", { original: trimmed, processed: unquoted });
                 } catch (innerError) {
                     // 如果内层解析失败，则使用原始字符串
-                    console.warn("尝试去除外层引号解析失败，使用原始字符串", innerError);
+                    console.warn("Failed to parse after removing outer quotes, using original string", innerError);
                 }
             }
         }
@@ -97,8 +93,8 @@ function handleJsonData(jsonString, variableName) {
         viewState.formatted = JSON.stringify(jsonData, null, 2);
         viewState.currentDisplay = 'formatted';
         
-        console.log("JSON解析成功，准备渲染", { 
-            type: Array.isArray(jsonData) ? "数组" : typeof jsonData,
+        console.log("JSON parsing successful, preparing to render", { 
+            type: Array.isArray(jsonData) ? "array" : typeof jsonData,
             length: Array.isArray(jsonData) ? jsonData.length : 
                    (typeof jsonData === 'object' ? Object.keys(jsonData).length : 0)
         });
@@ -112,23 +108,23 @@ function handleJsonData(jsonString, variableName) {
         // 清除错误
         hideError();
     } catch (e) {
-        console.error("JSON解析错误:", e);
+        console.error("JSON parsing error:", e);
         // 显示无法解析的原始内容
         viewState.original = jsonString;
         document.getElementById('jsonViewer').innerText = jsonString;
-        showError(`无法解析JSON: ${e.message}`);
+        showError(`Unable to parse JSON: ${e.message}`);
     }
 }
 
 // 渲染JSON
 function renderJsonWithViewer() {
-    console.log("开始渲染JSON", { displayMode: viewState.currentDisplay });
+    console.log("Starting JSON rendering", { displayMode: viewState.currentDisplay });
     const viewerContainer = document.getElementById('jsonViewer');
     viewerContainer.innerHTML = '';
     
     // 紧凑模式直接显示原始字符串
     if (viewState.currentDisplay === 'original') {
-        console.log("使用紧凑模式显示");
+        console.log("Using compact mode display");
         viewerContainer.innerText = viewState.original;
         return;
     }
@@ -136,7 +132,7 @@ function renderJsonWithViewer() {
     // 确保DOM已经准备好
     $(document).ready(function() {
         try {
-            console.log("使用jquery.json-viewer渲染");
+            console.log("Using jquery.json-viewer for rendering");
             // 使用jquery.json-viewer渲染
             $(viewerContainer).jsonViewer(jsonData, {
                 collapsed: false,
@@ -145,7 +141,7 @@ function renderJsonWithViewer() {
             });
             
         } catch (e) {
-            console.error('JSON查看器初始化错误:', e);
+            console.error('JSON viewer initialization error:', e);
             // 备用：使用pre元素显示格式化的JSON
             viewerContainer.innerHTML = `<pre>${escapeHtml(viewState.formatted)}</pre>`;
         }
@@ -159,13 +155,13 @@ function copyJsonToClipboard() {
         viewState.original;
     
     navigator.clipboard.writeText(jsonToCopy).then(() => {
-        document.getElementById('statusBar').textContent = '已复制到剪贴板';
+        document.getElementById('statusBar').textContent = 'JSON copied to clipboard';
         vscode.postMessage({ command: 'copied' });
         
         // 2秒后恢复状态栏
         setTimeout(updateStatusBar, 2000);
     }).catch(err => {
-        showError(`复制失败: ${err}`);
+        showError(`Copy failed: ${err}`);
     });
 }
 
@@ -174,14 +170,16 @@ function toggleFormat() {
     if (!viewState.original) return;
     
     if (viewState.currentDisplay === 'formatted') {
-        document.getElementById('formatButton').textContent = '格式化';
+        // 切换到紧凑模式
+        document.getElementById('formatButton').textContent = 'Format';
         document.getElementById('jsonViewer').innerText = viewState.original;
         viewState.currentDisplay = 'original';
         
         // 禁用展开/折叠按钮
         document.getElementById('collapseToggleAllNodes').disabled = true;
     } else {
-        document.getElementById('formatButton').textContent = '紧凑';
+        // 切换到格式化模式
+        document.getElementById('formatButton').textContent = 'Compact';
         viewState.currentDisplay = 'formatted';
         
         // 启用展开/折叠按钮
@@ -195,19 +193,18 @@ function toggleFormat() {
     clearSearchResults();
 }
 
-
 // 折叠所有节点
 function collapseToggleAllNodes() {
-    console.log("折叠/折叠所有节点");
+    console.log("Collapse/expand all nodes");
     try {
         // 确保选择正确的元素并使用jQuery折叠，保留第一个节点展开
         $('#jsonViewer .json-toggle').not(':first').each(function() {
             $(this).click();
         });
-        document.getElementById('statusBar').textContent = '折叠/折叠所有节点（除根节点外）';
+        document.getElementById('statusBar').textContent = 'Collapsed/expanded all nodes (except root)';
     } catch (e) {
-        console.error("折叠/折叠所有节点:", e);
-        showError("折叠/折叠所有节点: " + e.message);
+        console.error("Collapse/expand all nodes error:", e);
+        showError("Collapse/expand all nodes: " + e.message);
     }
 }
 
@@ -216,11 +213,11 @@ function updateStatusBar() {
     let statusText = '';
     
     if (Array.isArray(jsonData)) {
-        statusText = `数组: ${jsonData.length} 项`;
+        statusText = `Array: ${jsonData.length} items`;
     } else if (jsonData && typeof jsonData === 'object') {
-        statusText = `对象: ${Object.keys(jsonData).length} 属性`;
+        statusText = `Object: ${Object.keys(jsonData).length} properties`;
     } else {
-        statusText = '就绪';
+        statusText = 'Ready';
     }
     
     document.getElementById('statusBar').textContent = statusText;
@@ -253,10 +250,10 @@ function searchInJson() {
         currentSearchIndex = 0;
         highlightSearchResult(0);
         updateSearchButtons();
-        document.getElementById('statusBar').textContent = `找到 ${searchResults.length} 个匹配项`;
+        document.getElementById('statusBar').textContent = `Found ${searchResults.length} matches`;
     } else {
         updateSearchButtons();
-        document.getElementById('statusBar').textContent = '未找到匹配项';
+        document.getElementById('statusBar').textContent = 'No matches found';
     }
 }
 
@@ -282,13 +279,8 @@ function highlightSearchResult(index) {
         parent = parent.parent().closest('.json-collapsed');
     }
     
-    document.getElementById('statusBar').textContent = 
-        `匹配项 ${currentSearchIndex + 1} / ${searchResults.length}`;
+    document.getElementById('statusBar').textContent = `Match ${currentSearchIndex + 1} / ${searchResults.length}`;
 }
-
-
-
-
 
 // 跳转到上一个搜索结果
 function goToPreviousResult() {
@@ -349,4 +341,4 @@ function escapeHtml(unsafe) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
-} 
+}

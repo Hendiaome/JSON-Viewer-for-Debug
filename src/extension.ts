@@ -24,7 +24,6 @@ function log(message: string, show : boolean = false) {
     if (show) {
         channel.show();
     }
-   
 }
 
 export function activate(context: vscode.ExtensionContext) { 
@@ -71,6 +70,7 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             // 检查调试会话状态
             if (!vscode.debug.activeDebugSession) {
+              
                 vscode.window.showErrorMessage('No active debug session');
                 return;
             }
@@ -178,8 +178,8 @@ async function getVariableNameFromSelectionOrInput(): Promise<string | undefined
     
     // 从用户输入获取
     const inputName = await vscode.window.showInputBox({
-        placeHolder: '输入要转换为JSON的变量名',
-        prompt: '请输入变量名称'
+        placeHolder: 'Enter variable name to convert to JSON',
+        prompt: 'Please enter variable name'
     });
     
     if (!inputName) {
@@ -352,12 +352,14 @@ function setupJsonViewPanel(panel: vscode.WebviewPanel, jsonString: string, titl
     const jqueryPath = vscode.Uri.joinPath(context.extensionUri, 'src', 'resources',  'jquery.min.js');
     const jsonViewerJsPath = vscode.Uri.joinPath(context.extensionUri, 'src', 'resources', 'jquery.json-viewer.js');
     const jsonViewerCssPath = vscode.Uri.joinPath(context.extensionUri, 'src', 'resources', 'jquery.json-viewer.css');
+    const promotionPath = vscode.Uri.joinPath(context.extensionUri, 'src', 'resources', 'promotion.js');
     
     // 转换为webview可用URI
     const scriptUri = panel.webview.asWebviewUri(scriptPath);
     const jqueryUri = panel.webview.asWebviewUri(jqueryPath);
     const jsonViewerJsUri = panel.webview.asWebviewUri(jsonViewerJsPath);
     const jsonViewerCssUri = panel.webview.asWebviewUri(jsonViewerCssPath);
+    const promotionUri = panel.webview.asWebviewUri(promotionPath);
     
     // 读取HTML模板
     let htmlContent = fs.readFileSync(htmlPath.fsPath, 'utf8');
@@ -367,7 +369,8 @@ function setupJsonViewPanel(panel: vscode.WebviewPanel, jsonString: string, titl
         '{{scriptUri}}': scriptUri.toString(),
         '{{jqueryUri}}': jqueryUri.toString(),
         '{{jsonViewerJsUri}}': jsonViewerJsUri.toString(),
-        '{{jsonViewerCssUri}}': jsonViewerCssUri.toString()
+        '{{jsonViewerCssUri}}': jsonViewerCssUri.toString(),
+        '{{promotionUri}}': promotionUri.toString()
     };
     
     // 应用替换
@@ -383,15 +386,25 @@ function setupJsonViewPanel(panel: vscode.WebviewPanel, jsonString: string, titl
         message => {
             switch (message.command) {
                 case 'ready':
-                    // 发送JSON数据
+                    // 发送JSON数据和语言设置
                     panel.webview.postMessage({ 
                         command: 'setJson', 
                         jsonString,
-                        variableName: title.replace('JSON View: ', '')
+                        variableName: title.replace('JSON View: ', ''),
+                      
                     });
                     break;
                 case 'copied':
-                    vscode.window.showInformationMessage('JSON已复制到剪贴板');
+                    // 使用系统语言显示消息
+                    const copySuccessMessage = vscode.env.language.startsWith('zh') ? 'JSON已复制到剪贴板' : 'JSON copied to clipboard';
+                    vscode.window.showInformationMessage(copySuccessMessage);
+                    break;
+              
+                case 'openUrl':
+                    // 处理打开URL请求
+                    if (message.url) {
+                        vscode.env.openExternal(vscode.Uri.parse(message.url));
+                    }
                     break;
 
             }

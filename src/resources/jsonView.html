@@ -70,12 +70,6 @@
             cursor: not-allowed;
         }
         
-        /* 调试按钮 */
-        #debugButton {
-            background-color: #ff5500;
-            margin-left: auto;
-        }
-        
         /* 搜索栏样式 */
         .search-container {
             display: flex;
@@ -171,16 +165,16 @@
     </div>
     
     <div class="toolbar">
-        <button id="copyButton" title="复制JSON到剪贴板">复制</button>
-        <button id="formatButton" title="切换格式化和紧凑视图">紧凑</button>
-        <button id="collapseToggleAllNodes" title="展开/折叠所有节点">展开/折叠全部</button>
+        <button id="copyButton" title="Copy JSON to clipboard">Copy</button>
+        <button id="formatButton" title="Toggle formatted and compact view">Compact</button>
+        <button id="collapseToggleAllNodes" title="Expand/collapse all nodes">Expand/Collapse All</button>
         
         <div class="search-container">
-            <input type="text" id="searchInput" placeholder="搜索...">
-            <button id="searchButton">搜索</button>
+            <input type="text" id="searchInput" placeholder="Search...">
+            <button id="searchButton">Search</button>
             <div class="search-navigation">
-                <button id="prevButton" title="上一个匹配项" disabled>↑</button>
-                <button id="nextButton" title="下一个匹配项" disabled>↓</button>
+                <button id="prevButton" title="Previous match" disabled>↑</button>
+                <button id="nextButton" title="Next match" disabled>↓</button>
             </div>
         </div>
     </div>
@@ -192,8 +186,11 @@
     </div>
     
     <div class="status-bar">
-        <span id="statusBar">就绪</span>
+        <span id="statusBar">Ready</span>
     </div>
+    
+    <!-- 推广区域入口 -->
+    <div id="promotionContainer"></div>
     
     <!-- 使用本地jQuery (JSONViewer依赖) -->
     <script src="{{jqueryUri}}"></script>
@@ -201,13 +198,15 @@
     <script src="{{jsonViewerJsUri}}"></script>
     <!-- 加载我们的自定义JavaScript -->
     <script src="{{scriptUri}}"></script>
+    <!-- 推广功能 -->
+    <script src="{{promotionUri}}"></script>
     <script>
         // VSCode API
         const vscode = acquireVsCodeApi();
         
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM加载完成，初始化JSON查看器');
+            console.log('DOM loaded, initializing JSON viewer');
             initJsonViewer();
         });
     </script>

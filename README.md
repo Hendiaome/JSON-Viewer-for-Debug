@@ -50,18 +50,13 @@
 
 ### 配置示例
 
-在 `settings.json` 中添加：
+在项目的 `.vscode/settings.json` 中配置：
 
 ```json
 {
   "jsonViewForDebug.jsonLibrary": "gson"
 }
 ```
-
-或通过VSCode设置界面：
-1. 打开设置 (`Ctrl+,` 或 `Cmd+,`)
-2. 搜索 "JSON Viewer for Debug"
-3. 在下拉菜单中选择您偏好的JSON库
 
 ## 支持的库
 
@@ -71,46 +66,6 @@
 - **Alibaba FastJSON** - `com.alibaba.fastjson.JSON.toJSONString(object)`
 
 扩展会根据您的配置首先尝试指定的库，如果失败则自动尝试其他可用的库作为备选。
-
-### 库依赖说明
-
-确保您的Java项目包含以下依赖之一：
-
-**Maven 依赖：**
-```xml
-<!-- Gson -->
-<dependency>
-    <groupId>com.google.code.gson</groupId>
-    <artifactId>gson</artifactId>
-    <version>2.10.1</version>
-</dependency>
-
-<!-- Jackson -->
-<dependency>
-    <groupId>com.fasterxml.jackson.core</groupId>
-    <artifactId>jackson-databind</artifactId>
-    <version>2.15.2</version>
-</dependency>
-
-<!-- FastJSON -->
-<dependency>
-    <groupId>com.alibaba</groupId>
-    <artifactId>fastjson</artifactId>
-    <version>1.2.83</version>
-</dependency>
-```
-
-**Gradle 依赖：**
-```gradle
-// Gson
-implementation 'com.google.code.gson:gson:2.10.1'
-
-// Jackson
-implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
-
-// FastJSON
-implementation 'com.alibaba:fastjson:1.2.83'
-```
 
 ## 需求
 
@@ -126,13 +81,16 @@ implementation 'com.alibaba:fastjson:1.2.83'
 
 ## 版本历史
 
+### v1.0.1
+- 🎨 简化代码结构，移除多语言支持，统一使用英语界面
+- 💡 新增Maven Helper推广
+
 ### v1.0.0
 - ✨ **新增搜索功能**：
   - 实时搜索JSON内容
-  - 上一个/下一个匹配项导航按钮
+  - 上一个/下一个匹配项导航
   - 键盘快捷键支持（F3/Shift+F3）
   - 搜索结果高亮显示
-  - 搜索状态栏显示匹配数量和当前位置
 - 🎨 **界面优化**：
   - 改进搜索工具栏布局
   - 优化按钮样式和交互体验
@@ -148,11 +106,6 @@ implementation 'com.alibaba:fastjson:1.2.83'
   - VSCode主题集成
   - 右键菜单和快捷键支持
 
-## 开源信息
-
-- **许可证**: MIT License
-- **仓库地址**: [https://github.com/hendiaome/JSON-Viewer-for-Debug](https://github.com/hendiaome/JSON-Viewer-for-Debug)
-- **问题反馈**: [https://github.com/hendiaome/JSON-Viewer-for-Debug/issues](https://github.com/hendiaome/JSON-Viewer-for-Debug/issues)
 
 ---
 
@@ -178,7 +131,7 @@ A VSCode extension for viewing any data in Java debugger. It supports any variab
 ### Basic Usage
 1. In a Java application debugging session, when stopped at a breakpoint
 2. Right-click on any variable in the variables panel (supports any Java object)
-3. Select "View JSON" option
+3. Select "View as JSON" option
 4. Or, use the shortcut `Ctrl+Shift+J` (`Cmd+Shift+J` on Mac)
 
 ### JSON Viewer Features
@@ -206,18 +159,13 @@ Search for "JSON Viewer for Debug" in VSCode settings to configure this option.
 
 ### Configuration Example
 
-Add to your `settings.json`:
+Configure in your project's `.vscode/settings.json`:
 
 ```json
 {
   "jsonViewForDebug.jsonLibrary": "gson"
 }
 ```
-
-Or through VSCode Settings UI:
-1. Open Settings (`Ctrl+,` or `Cmd+,`)
-2. Search for "JSON Viewer for Debug"
-3. Select your preferred JSON library from the dropdown
 
 ## Supported Libraries
 
@@ -228,50 +176,11 @@ This extension supports converting objects to JSON using:
 
 The extension will first try the configured library, and automatically fallback to other available libraries if the primary one fails.
 
-### Library Dependencies
-
-Make sure your Java project includes one of the following dependencies:
-
-**Maven Dependencies:**
-```xml
-<!-- Gson -->
-<dependency>
-    <groupId>com.google.code.gson</groupId>
-    <artifactId>gson</artifactId>
-    <version>2.10.1</version>
-</dependency>
-
-<!-- Jackson -->
-<dependency>
-    <groupId>com.fasterxml.jackson.core</groupId>
-    <artifactId>jackson-databind</artifactId>
-    <version>2.15.2</version>
-</dependency>
-
-<!-- FastJSON -->
-<dependency>
-    <groupId>com.alibaba</groupId>
-    <artifactId>fastjson</artifactId>
-    <version>1.2.83</version>
-</dependency>
-```
-
-**Gradle Dependencies:**
-```gradle
-// Gson
-implementation 'com.google.code.gson:gson:2.10.1'
-
-// Jackson
-implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
-
-// FastJSON
-implementation 'com.alibaba:fastjson:1.2.83'
-```
-
 ## Requirements
 
 - VSCode 1.60.0 or higher
 - Java language support
+- At least one supported JSON library in your project
 
 ## Troubleshooting
 
@@ -282,6 +191,12 @@ implementation 'com.alibaba:fastjson:1.2.83'
 
 ## Version History
 
+### v1.0.1
+- 🎨 Simplified code structure, removed multi-language support, unified to English interface
+- 🔧 Optimized script loading and initialization process
+- 📦 Reduced dependencies, improved performance and stability
+- 💡 added Maven Helper promotion
+
 ### v1.0.0
 - ✨ **New Search Features**:
   - Real-time JSON content search
@@ -289,6 +204,7 @@ implementation 'com.alibaba:fastjson:1.2.83'
   - Keyboard shortcuts support (F3/Shift+F3)
   - Search result highlighting
   - Status bar showing match count and current position
+
 - 🎨 **UI Improvements**:
   - Enhanced search toolbar layout
   - Optimized button styles and interaction experience
@@ -304,9 +220,7 @@ implementation 'com.alibaba:fastjson:1.2.83'
   - VSCode theme integration
   - Context menu and keyboard shortcut support
 
-## Open Source Information
+---
 
-- **License**: MIT License
-- **Repository**: [https://github.com/hendiaome/JSON-Viewer-for-Debug](https://github.com/hendiaome/JSON-Viewer-for-Debug)
-- **Bug Reports**: [https://github.com/hendiaome/JSON-Viewer-for-Debug/issues](https://github.com/hendiaome/JSON-Viewer-for-Debug/issues)
+**Enjoy debugging with beautiful JSON views!** 🚀
 

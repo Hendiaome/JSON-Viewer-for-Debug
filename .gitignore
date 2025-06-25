@@ -27,3 +27,5 @@ out/test/extension.test.js.map
 .vscode/settings.json
 .vscode/tasks.json
 json-viewer-for-debug-*.vsix
+# 推广文件不开源
+src/resources/promotion.js
