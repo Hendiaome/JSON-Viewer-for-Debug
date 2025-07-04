@@ -81,6 +81,11 @@
 
 ## 版本历史
 
+### v1.0.2
+- ✨ **evaluate逻辑优化**：
+  - 新增直接看String变量，优化JOSN视图咯几
+  - 新增赞助入口
+
 ### v1.0.1
 - 🎨 简化代码结构，移除多语言支持，统一使用英语界面
 - 💡 新增Maven Helper推广
@@ -190,6 +195,11 @@ The extension will first try the configured library, and automatically fallback 
 - If the configured JSON library is not available, the extension will automatically try other available libraries as fallbacks
 
 ## Version History
+
+### v1.0.2
+- ✨ **evaluate logic optimized**：
+  - Added direct String variable viewing, optimized JSON view logic
+  - Added sponsor entry
 
 ### v1.0.1
 - 🎨 Simplified code structure, removed multi-language support, unified to English interface

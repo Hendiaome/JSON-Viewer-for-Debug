@@ -58,7 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
                     } else if (m.event === 'continued') {
                         // 线程继续，清除记录的线程ID
                         pausedThreadId = null;
-                        log('Thread continued', true);
+                        // log('Thread continued', true);
                     }
                 }
             };
@@ -70,25 +70,25 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             // 检查调试会话状态
             if (!vscode.debug.activeDebugSession) {
-              
                 vscode.window.showErrorMessage('No active debug session');
                 return;
             }
             
-            // 获取变量名
-            let variableName = getVariableName(variableData);
-            
-            if (!variableName) {
+            // 获取变量信息
+            const variableInfo = getVariableInfo(variableData);
+            if (!variableInfo.name) {
                 log('No variable name found, trying to get from selection or user input', true);
-                variableName = await getVariableNameFromSelectionOrInput();
+                const variableName = await getVariableNameFromSelectionOrInput();
                 
                 if (!variableName) {
                     vscode.window.showErrorMessage('Variable name not found');
                     return;
                 }
+                
+                // 对于手动输入的变量名，回退到表达式求值方式
+                await tryConvertToJson(variableName, context);
+                return;
             }
-            
-            log(`Processing variable: ${variableName}`, true);
             
             // 检查调试状态
             if (!isDebuggerPaused()) {
@@ -96,8 +96,22 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
             
-            // 尝试不同的JSON转换方法
-            await tryConvertToJson(variableName, context);
+            // 获取调试上下文 - 只获取一次
+            const debugContext = await getDebugContext();
+            
+            // 如果有原生的变量值，进行智能判断
+            if (variableInfo.value !== undefined) {
+                
+                // 使用重写的智能处理函数，直接返回处理后的JSON字符串
+                const processResult = processVariableValue(variableInfo.value || '');
+                if (processResult.isJson) {
+                    createJsonViewPanel(`JSON View: ${variableInfo.name || 'Unknown'}`, processResult.value, context);
+                    return;
+                } 
+            }
+            
+            // 如果没有原生值，回退到表达式求值方式
+            await tryConvertToJsonWithContext(variableInfo.name || 'unknown', debugContext, context);
             
         } catch (error: any) {
             const errorMsg = error.message || String(error);
@@ -139,28 +153,106 @@ export function activate(context: vscode.ExtensionContext) {
     log('json viewer for debug extension activated');
 }
 
-// 从变量数据中获取变量名
-function getVariableName(variableData: any): string | undefined {
-    if (!variableData) return undefined;
+// 从变量数据中获取变量信息
+function getVariableInfo(variableData: any): {name?: string, value?: string, variablesReference?: number} {
+    if (!variableData) return {};
     
-    // 尝试不同的属性获取变量名
-    if (variableData.variable && variableData.variable.name) {
-        log(`Found variable name from context menu: ${variableData.variable.name}`, true);
-        return variableData.variable.name;
+    // log(`Complete variable data: ${JSON.stringify(variableData, null, 2)}`, true);
+    
+    // 尝试不同的属性获取变量信息
+    if (variableData.variable) {
+        const variable = variableData.variable;
+        return {
+            name: variable.name,
+            value: variable.value,
+            variablesReference: variable.variablesReference
+        };
     } 
     
     if (variableData.name) {
-        log(`Found variable name from direct property: ${variableData.name}`, true);
-        return variableData.name;
+        return {
+            name: variableData.name,
+            value: variableData.value,
+            variablesReference: variableData.variablesReference
+        };
     }
     
     if (variableData.evaluateName) {
-        log(`Found variable from evaluateName: ${variableData.evaluateName}`, true);
-        return variableData.evaluateName;
+        return {
+            name: variableData.evaluateName,
+            value: variableData.value,
+            variablesReference: variableData.variablesReference
+        };
     }
     
-    log(`Complete variable data: ${JSON.stringify(variableData)}`);
-    return undefined;
+    return {};
+}
+
+// 从变量数据中获取变量名（保持向后兼容）
+function getVariableName(variableData: any): string | undefined {
+    const info = getVariableInfo(variableData);
+    return info.name;
+}
+
+// 检查字符串是否为有效JSON (借鉴其他JSON查看器的最佳实践)
+function isValidJSON(str: string): boolean {
+    if (typeof str !== 'string' || str.length === 0) {
+        return false;
+    }
+    
+    try {
+        JSON.parse(str);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+// 智能处理变量值 - 重写版本处理特殊JSON格式
+function processVariableValue(value: string): {isJson: boolean, value: string} {
+    if (!value) {
+        return {
+            isJson: false,
+            value: value
+        };
+    }
+    
+    const trimmed = value.trim();
+    
+    // 2. 处理 "{}"、"[]" 格式 (标准的引号包围JSON)
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || 
+        (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+        
+        try {
+            // 去掉外层引号: "{"key":"value"}" -> {"key":"value"}
+            const unquoted = trimmed.slice(1, -1);
+            
+            if (isValidJSON(unquoted)) {
+                log('Detected quoted JSON');
+                return {
+                    isJson: true,
+                    value: unquoted
+                };
+            }
+        } catch (e) {
+            // 解析失败，继续下面的处理
+        }
+    }
+    
+    // 3. 检查是否为直接的JSON字符串 ({}、[] 格式)
+    if (isValidJSON(trimmed)) {
+        log('Detected direct JSON');
+        return {
+            isJson: true,
+            value: trimmed
+        };
+    }
+    
+
+    return {
+        isJson: false,
+        value: trimmed
+    };
 }
 
 // 从选择或用户输入中获取变量名
@@ -195,8 +287,53 @@ function isDebuggerPaused(): boolean {
     return vscode.debug.activeDebugSession !== undefined;
 }
 
-// 尝试不同的JSON转换方法
+// 尝试不同的JSON转换方法 (旧版本，保持向后兼容)
 async function tryConvertToJson(variableName: string, context: vscode.ExtensionContext): Promise<void> {
+    const debugContext = await getDebugContext();
+    await tryConvertToJsonWithContext(variableName, debugContext, context);
+}
+
+// 尝试不同的JSON转换方法 (优化版本，复用debugContext)
+async function tryConvertToJsonWithContext(variableName: string, debugContext: DebugContext, context: vscode.ExtensionContext): Promise<void> {
+    try {
+        // 直接获取变量的值
+        const variableValue = await getVariableValue(debugContext, variableName);
+        
+        // 如果已经是字符串，使用智能处理函数
+        const processResult = processVariableValue(variableValue);
+        if (processResult.isJson) {
+            createJsonViewPanel(`JSON View: ${variableName}`, processResult.value, context);
+            return;
+        } 
+        
+        // 如果不是字符串，尝试JSON转换
+        await tryJsonConversionWithContext(variableName, debugContext, context);
+    } catch (error) {
+        log(`Error getting variable value: ${error}`);
+        // 如果直接获取值失败，回退到JSON转换方式
+        await tryJsonConversionWithContext(variableName, debugContext, context);
+    }
+}
+
+// 直接获取变量的值
+async function getVariableValue(context: DebugContext, variableName: string): Promise<any> {
+    const response = await evaluateExpression(context, variableName);
+    
+    if (!response || response.result === undefined) {
+        throw new Error(`Cannot get value for variable: ${variableName}`);
+    }
+    
+    return response.result;
+}
+
+// 尝试JSON转换 (旧版本，保持向后兼容)
+async function tryJsonConversion(variableName: string, context: vscode.ExtensionContext): Promise<void> {
+    const debugContext = await getDebugContext();
+    await tryJsonConversionWithContext(variableName, debugContext, context);
+}
+
+// 尝试JSON转换 (优化版本，复用debugContext)
+async function tryJsonConversionWithContext(variableName: string, debugContext: DebugContext, context: vscode.ExtensionContext): Promise<void> {
     // 获取配置的JSON库
     const config = vscode.workspace.getConfiguration('jsonViewForDebug');
     const jsonLibrary = config.get<string>('jsonLibrary', 'gson');
@@ -204,49 +341,38 @@ async function tryConvertToJson(variableName: string, context: vscode.ExtensionC
     log(`Using JSON library: ${jsonLibrary}`);
     
     try {
-        let expression: string;
-        
-        switch (jsonLibrary) {
-            case 'gson':
-                expression = `new com.google.gson.Gson().toJson(${variableName})`;
-                break;
-            case 'jackson':
-                expression = `new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(${variableName})`;
-                break;
-            case 'fastjson':
-                expression = `com.alibaba.fastjson.JSON.toJSONString(${variableName})`;
-                break;
-            default:
-                throw new Error(`Unsupported JSON library: ${jsonLibrary}`);
-        }
-        
-        await evaluateAndShowJson(variableName, expression, context);
+        const expression = getJsonConversionExpression(variableName, jsonLibrary);
+        await evaluateAndShowJsonWithContext(variableName, expression, debugContext, context);
     } catch (error) {
         log(`Error with ${jsonLibrary}: ${error}`);
         
         // 如果配置的库失败，尝试其他库作为备选
-        await tryFallbackLibraries(variableName, context, jsonLibrary);
+        await tryFallbackLibrariesWithContext(variableName, debugContext, context, jsonLibrary);
     }
 }
 
-// 尝试备选的JSON库
+// 尝试备选的JSON库 (旧版本，保持向后兼容)
 async function tryFallbackLibraries(variableName: string, context: vscode.ExtensionContext, failedLibrary: string): Promise<void> {
-    const libraries = [
-        { name: 'gson', expression: `new com.google.gson.Gson().toJson(${variableName})` },
-        { name: 'jackson', expression: `new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(${variableName})` },
-        { name: 'fastjson', expression: `com.alibaba.fastjson.JSON.toJSONString(${variableName})` }
-    ];
+    const debugContext = await getDebugContext();
+    await tryFallbackLibrariesWithContext(variableName, debugContext, context, failedLibrary);
+}
+
+// 尝试备选的JSON库 (优化版本，复用debugContext)
+async function tryFallbackLibrariesWithContext(variableName: string, debugContext: DebugContext, context: vscode.ExtensionContext, failedLibrary: string): Promise<void> {
+    // 尝试不同的JSON库
+    const libraries = ['gson', 'jackson', 'fastjson'];
     
     // 过滤掉已经失败的库
-    const fallbackLibraries = libraries.filter(lib => lib.name !== failedLibrary);
+    const fallbackLibraries = libraries.filter(lib => lib !== failedLibrary);
     
     for (const lib of fallbackLibraries) {
         try {
-            log(`Trying fallback library: ${lib.name}`);
-            await evaluateAndShowJson(variableName, lib.expression, context);
+            log(`Trying fallback library: ${lib}`);
+            const expression = getJsonConversionExpression(variableName, lib);
+            await evaluateAndShowJsonWithContext(variableName, expression, debugContext, context);
             return; // 成功则返回
         } catch (error) {
-            log(`Fallback library ${lib.name} also failed: ${error}`);
+            log(`Fallback library ${lib} also failed: ${error}`);
         }
     }
     
@@ -254,39 +380,18 @@ async function tryFallbackLibraries(variableName: string, context: vscode.Extens
     throw new Error(`All JSON libraries failed. Please ensure you have at least one of the following libraries in your classpath: Gson, Jackson, or FastJSON`);
 }
 
-// 评估表达式并显示JSON结果
+// 评估表达式并显示JSON结果 (旧版本，保持向后兼容)
 async function evaluateAndShowJson(variableName: string, expression: string, context: vscode.ExtensionContext): Promise<void> {
-    if (!vscode.debug.activeDebugSession) {
-        throw new Error('No active debug session');
-    }
-    
+    const debugContext = await getDebugContext();
+    await evaluateAndShowJsonWithContext(variableName, expression, debugContext, context);
+}
+
+// 评估表达式并显示JSON结果 (优化版本，复用debugContext)
+async function evaluateAndShowJsonWithContext(variableName: string, expression: string, debugContext: DebugContext, context: vscode.ExtensionContext): Promise<void> {
     log(`Evaluating expression: ${expression}`, true);
     
-    // 获取暂停的线程
-    const pausedThreadId = await findPausedThread();
-    if (!pausedThreadId) {
-        throw new Error('No paused thread found');
-    }
-    
-    // 获取堆栈帧
-    const stackFrames = await vscode.debug.activeDebugSession.customRequest('stackTrace', {
-        threadId: pausedThreadId
-    });
-    
-    if (!stackFrames || !stackFrames.stackFrames || stackFrames.stackFrames.length === 0) {
-        throw new Error('No stack frames found for paused thread');
-    }
-    
-    // 使用顶层帧
-    const frameId = stackFrames.stackFrames[0].id;
-    
     // 评估表达式
-    const response = await vscode.debug.activeDebugSession.customRequest('evaluate', {
-        expression: expression,
-        context: 'watch',
-        frameId: frameId,
-        threadId: pausedThreadId
-    });
+    const response = await evaluateExpression(debugContext, expression);
     
     if (!response || !response.result) {
         throw new Error(`Expression evaluation returned no result: ${JSON.stringify(response)}`);
@@ -306,6 +411,69 @@ async function findPausedThread(): Promise<any> {
     }
     
     return null;
+}
+
+// 获取调试上下文（会话、线程、帧）
+interface DebugContext {
+    session: vscode.DebugSession;
+    threadId: any;
+    frameId: any;
+}
+
+async function getDebugContext(): Promise<DebugContext> {
+    if (!vscode.debug.activeDebugSession) {
+        throw new Error('No active debug session');
+    }
+    
+    // 获取暂停的线程
+    const pausedThreadId = await findPausedThread();
+    if (!pausedThreadId) {
+        throw new Error('No paused thread found');
+    }
+    
+    // 获取堆栈帧
+    const stackFrames = await vscode.debug.activeDebugSession.customRequest('stackTrace', {
+        threadId: pausedThreadId
+    });
+    
+    if (!stackFrames || !stackFrames.stackFrames || stackFrames.stackFrames.length === 0) {
+        throw new Error('No stack frames found for paused thread');
+    }
+    
+    return {
+        session: vscode.debug.activeDebugSession,
+        threadId: pausedThreadId,
+        frameId: stackFrames.stackFrames[0].id
+    };
+}
+
+// 在调试器中评估表达式
+async function evaluateExpression(context: DebugContext, expression: string): Promise<any> {
+    
+    const response = await context.session.customRequest('evaluate', {
+        expression: expression,
+        context: 'watch',
+        frameId: context.frameId,
+        threadId: context.threadId
+    });
+    
+    return response;
+}
+
+
+
+// 根据JSON库生成转换表达式
+function getJsonConversionExpression(variableName: string, jsonLibrary: string): string {
+    switch (jsonLibrary) {
+        case 'gson':
+            return `new com.google.gson.Gson().toJson(${variableName})`;
+        case 'jackson':
+            return `new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(${variableName})`;
+        case 'fastjson':
+            return `com.alibaba.fastjson.JSON.toJSONString(${variableName})`;
+        default:
+            throw new Error(`Unsupported JSON library: ${jsonLibrary}`);
+    }
 }
 
 // 创建JSON查看面板
@@ -405,6 +573,11 @@ function setupJsonViewPanel(panel: vscode.WebviewPanel, jsonString: string, titl
                     if (message.url) {
                         vscode.env.openExternal(vscode.Uri.parse(message.url));
                     }
+                    break;
+                case 'openSponsor':
+                    // 处理赞助链接点击
+                    vscode.env.openExternal(vscode.Uri.parse('https://paypal.me/hendiaome'));
+                    vscode.window.showInformationMessage('Thanks for your support! PayPal page opened.');
                     break;
 
             }
