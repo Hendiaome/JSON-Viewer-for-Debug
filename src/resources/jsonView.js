@@ -37,10 +37,10 @@ function initJsonViewer() {
     document.getElementById('nextButton').addEventListener('click', goToNextResult);
     
     // 注册赞助链接事件
-    document.getElementById('sponsorLink').addEventListener('click', function(e) {
-        e.preventDefault();
-        vscode.postMessage({ command: 'openSponsor' });
-    });
+    // document.getElementById('sponsorLink').addEventListener('click', function(e) {
+    //     e.preventDefault();
+    //     vscode.postMessage({ command: 'openSponsor' });
+    // });
     
     document.getElementById('searchInput').addEventListener('keydown', e => {
         if (e.key === 'Enter') searchInJson();
