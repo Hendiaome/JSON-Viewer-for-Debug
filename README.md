@@ -80,6 +80,8 @@
 - 如果配置的JSON库不可用，扩展会自动尝试其他可用的库
 
 ## 版本历史
+### v1.1.0
+- 兼容js number 展示溢出的问题
 
 ### v1.0.2
 - ✨ **evaluate逻辑优化**：
@@ -195,6 +197,9 @@ The extension will first try the configured library, and automatically fallback 
 - If the configured JSON library is not available, the extension will automatically try other available libraries as fallbacks
 
 ## Version History
+
+### v1.1.0
+- Fix JS number overflow display issue
 
 ### v1.0.2
 - ✨ **evaluate logic optimized**：

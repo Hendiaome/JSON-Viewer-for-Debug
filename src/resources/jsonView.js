@@ -37,10 +37,10 @@ function initJsonViewer() {
     document.getElementById('nextButton').addEventListener('click', goToNextResult);
     
     // 注册赞助链接事件
-    // document.getElementById('sponsorLink').addEventListener('click', function(e) {
-    //     e.preventDefault();
-    //     vscode.postMessage({ command: 'openSponsor' });
-    // });
+    document.getElementById('sponsorLink').addEventListener('click', function(e) {
+        e.preventDefault();
+        vscode.postMessage({ command: 'openSponsor' });
+    });
     
     document.getElementById('searchInput').addEventListener('keydown', e => {
         if (e.key === 'Enter') searchInJson();
@@ -93,12 +93,26 @@ function handleJsonData(jsonString, variableName) {
         }
         
         // 尝试解析JSON
-        jsonData = typeof processedJsonString === 'string' ? JSON.parse(processedJsonString) : processedJsonString;
+        // 优先用 json-bigint 解析，兜底用 JSON.parse
+        if (typeof processedJsonString === 'string') {
+            if (window.JSONbig) {
+                try {
+                    jsonData = window.JSONbig.parse(processedJsonString);
+                } catch (e) {
+                    console.warn('JSONbig 解析失败，回退到原生 JSON.parse', e);
+                    jsonData = JSON.parse(processedJsonString);
+                }
+            } else {
+                jsonData = JSON.parse(processedJsonString);
+            }
+        } else {
+            jsonData = processedJsonString;
+        }
         
         // 保存格式化的版本
         viewState.formatted = JSON.stringify(jsonData, null, 2);
         viewState.currentDisplay = 'formatted';
-        
+
         console.log("JSON parsing successful, preparing to render", { 
             type: Array.isArray(jsonData) ? "array" : typeof jsonData,
             length: Array.isArray(jsonData) ? jsonData.length : 

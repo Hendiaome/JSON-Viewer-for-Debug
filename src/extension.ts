@@ -521,6 +521,7 @@ function setupJsonViewPanel(panel: vscode.WebviewPanel, jsonString: string, titl
     const jsonViewerJsPath = vscode.Uri.joinPath(context.extensionUri, 'src', 'resources', 'jquery.json-viewer.js');
     const jsonViewerCssPath = vscode.Uri.joinPath(context.extensionUri, 'src', 'resources', 'jquery.json-viewer.css');
     const promotionPath = vscode.Uri.joinPath(context.extensionUri, 'src', 'resources', 'promotion.js');
+    const jsonBigIntPath = vscode.Uri.joinPath(context.extensionUri, 'src', 'resources', 'json-bigint.js');
     
     // 转换为webview可用URI
     const scriptUri = panel.webview.asWebviewUri(scriptPath);
@@ -528,6 +529,7 @@ function setupJsonViewPanel(panel: vscode.WebviewPanel, jsonString: string, titl
     const jsonViewerJsUri = panel.webview.asWebviewUri(jsonViewerJsPath);
     const jsonViewerCssUri = panel.webview.asWebviewUri(jsonViewerCssPath);
     const promotionUri = panel.webview.asWebviewUri(promotionPath);
+    const jsonBigIntUri = panel.webview.asWebviewUri(jsonBigIntPath);
     
     // 读取HTML模板
     let htmlContent = fs.readFileSync(htmlPath.fsPath, 'utf8');
@@ -538,7 +540,8 @@ function setupJsonViewPanel(panel: vscode.WebviewPanel, jsonString: string, titl
         '{{jqueryUri}}': jqueryUri.toString(),
         '{{jsonViewerJsUri}}': jsonViewerJsUri.toString(),
         '{{jsonViewerCssUri}}': jsonViewerCssUri.toString(),
-        '{{promotionUri}}': promotionUri.toString()
+        '{{promotionUri}}': promotionUri.toString(),
+        '{{jsonBigIntUri}}': jsonBigIntUri.toString()
     };
     
     // 应用替换
@@ -576,8 +579,8 @@ function setupJsonViewPanel(panel: vscode.WebviewPanel, jsonString: string, titl
                     break;
                 case 'openSponsor':
                     // 处理赞助链接点击
-                    vscode.env.openExternal(vscode.Uri.parse('https://paypal.me/hendiaome'));
-                    vscode.window.showInformationMessage('Thanks for your support! PayPal page opened.');
+                    vscode.env.openExternal(vscode.Uri.parse('https://patreon.com/hendiaome'));
+                    vscode.window.showInformationMessage('Thanks for your support! Patreon page opened.');
                     break;
 
             }
